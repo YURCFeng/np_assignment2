@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 
 	int rv;
     memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC; // AF_UNSPEC 表示支持IPv4和IPv6
+	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_DGRAM;
 
 	 if ((rv = getaddrinfo(Desthost, Destport, &hints, &servinfo)) != 0)
