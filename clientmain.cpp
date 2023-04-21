@@ -13,24 +13,56 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
+#include <vector>
 
 #include "protocol.h"
 #define MAX_RETRY 2
-
-const char *server_ip = "13.53.76.30";
-const int server_port = 5001;
+#define DEBUG
+char *server_ip = "13.53.76.30";
+int server_port = 5001;
 
 int main(int argc, char *argv[])
 {
+    int sock;
+	struct addrinfo hints,* p,* servinfo;
+	char delim[] = ":";
+	char *Desthost = strtok(argv[1], delim); // dizhi
+	char *Destport = strtok(NULL, delim);
+	int port = atoi(Destport); // 5000
+	server_ip = Desthost;
+	server_port = port;
+	printf("Host %s, and port %d.\n", server_ip, server_port);
+
+	int rv;
+    memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC; // AF_UNSPEC 表示支持IPv4和IPv6
+	hints.ai_socktype = SOCK_DGRAM;
+
+	 if ((rv = getaddrinfo(Desthost, Destport, &hints, &servinfo)) != 0)
+    { 
+        perror("getaddrinfo fail");
+        exit(1);
+    }
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+			perror("talker: socket");
+			continue;
+		}
+		break;
+	}
+	if (p == NULL) {
+		fprintf(stderr, "talker: failed to create socket\n");
+		return 2;
+	}
 
 	/* Do magic */
 	char buf[1000];
-	int sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock < 0)
-	{
-		perror("Failed to create socket");
-		exit(1);
-	}
+	// int sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+	// if (sock < 0)
+	// {
+	// 	perror("Failed to create socket");
+	// 	exit(1);
+	// }
 
 	struct timeval timeout;
 	timeout.tv_sec = 2;
@@ -49,25 +81,25 @@ int main(int argc, char *argv[])
 	msg.major_version = htons(1);
 	msg.minor_version = htons(0);
 
-	struct sockaddr_in serv_addr;
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(server_port);
-	inet_pton(AF_INET, server_ip, &serv_addr.sin_addr);
+	// struct sockaddr_in serv_addr;
+	// serv_addr.sin_family = AF_INET;
+	// serv_addr.sin_port = htons(server_port);
+	// inet_pton(AF_INET, server_ip, &serv_addr.sin_addr);
 	int retry_count = 0;
 	int n = 0;
 	calcProtocol res;
-	socklen_t serv_len = sizeof(serv_addr);
+	// socklen_t serv_len = sizeof(serv_addr);
 	while (retry_count <= MAX_RETRY)
 	{
 		// 发送消息
 		printf("Sending message\n");
-		if (sendto(sock, &msg, sizeof(msg), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+		if (sendto(sock, &msg, sizeof(msg), 0,  p->ai_addr, p->ai_addrlen) < 0)
 		{
 			perror("Failed to send message\n");
 			exit(1);
 		}
 		// memcpy
-		n = recvfrom(sock, &buf, sizeof(buf), 0, (struct sockaddr *)&serv_addr, &serv_len);
+		n = recvfrom(sock, &buf, sizeof(buf), 0,  p->ai_addr, &(p->ai_addrlen));
 		if (n < 0)
 		{
 			printf("Timeout, retrying...\n");
@@ -88,11 +120,11 @@ int main(int argc, char *argv[])
 		{
 			calcMessage msg1;
 			memcpy(&msg1, buf, sizeof(buf));
-			if(msg1.type==2&&msg1.message==2&&msg1.major_version==1&&msg1.minor_version==0){
+			if (msg1.type == 2 && msg1.message == 2 && msg1.major_version == 1 && msg1.minor_version == 0)
+			{
 				printf("The server sent a 'NOT OK' message\n");
 				close(sock);
 			}
-
 		}
 		else
 		{
@@ -156,17 +188,12 @@ int main(int argc, char *argv[])
 				int retry_count = 0;
 				calcMessage msg_after;
 
-				struct sockaddr_in serv_addr;
-				serv_addr.sin_family = AF_INET;
-				serv_addr.sin_port = htons(server_port);
-				inet_pton(AF_INET, server_ip, &serv_addr.sin_addr);
-				socklen_t serv_len = sizeof(serv_addr);
-
+#ifdef DEBUG
 				while (retry_count <= MAX_RETRY)
 				{
 					// 发送消息
 					printf("Sending message\n");
-					numbytes = sendto(sock, &res, sizeof(res), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+					numbytes = sendto(sock, &res, sizeof(res), 0, p->ai_addr, p->ai_addrlen);
 					if (numbytes < 0)
 					{
 						perror("Failed to send message");
@@ -174,7 +201,7 @@ int main(int argc, char *argv[])
 					}
 
 					// printf("sent %d bytes\n", numbytes);
-					int n = recvfrom(sock, &msg_after, sizeof(msg_after), 0, (struct sockaddr *)&serv_addr, &serv_len);
+					int n = recvfrom(sock, &msg_after, sizeof(msg_after), 0, p->ai_addr, &(p->ai_addrlen));
 					if (n < 0)
 					{
 						printf("Timeout, retrying...\n");
@@ -242,16 +269,11 @@ int main(int argc, char *argv[])
 				int retry_count = 0;
 				calcMessage msg_after;
 
-				struct sockaddr_in serv_addr;
-				serv_addr.sin_family = AF_INET;
-				serv_addr.sin_port = htons(server_port);
-				inet_pton(AF_INET, server_ip, &serv_addr.sin_addr);
-				socklen_t serv_len = sizeof(serv_addr);
 				while (retry_count <= MAX_RETRY)
 				{
 					// 发送消息
 					printf("Sending message\n");
-					numbytes = sendto(sock, &res, sizeof(res), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+					numbytes = sendto(sock, &res, sizeof(res), 0,p->ai_addr, p->ai_addrlen);
 					if (numbytes < 0)
 					{
 						perror("Failed to send message");
@@ -259,7 +281,7 @@ int main(int argc, char *argv[])
 					}
 
 					// printf("sent %d bytes\n", numbytes);
-					int n = recvfrom(sock, &msg_after, sizeof(msg_after), 0, (struct sockaddr *)&serv_addr, &serv_len);
+					int n = recvfrom(sock, &msg_after, sizeof(msg_after), 0, p->ai_addr,&(p->ai_addrlen));
 					if (n < 0)
 					{
 						printf("Timeout, retrying...\n");
@@ -295,4 +317,5 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+#endif
 }
