@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 					strncpy(op, "fdiv", sizeof(op));
 				}
 				// printf("%s %8.8g %8.8g = %8.8g\n", op, f1, f2, fresult);
-				printf("ASSIGNMENT: %s %8.8g %8.8g\n", f1,op,f2);
+				printf("ASSIGNMENT: %s %8.8g %8.8g\n", op,f1,f2);
 				printf("Calculated the result to %d\n", fresult);
 				res.flResult = fresult;
 				res.type = htons(2);
