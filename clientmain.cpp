@@ -24,48 +24,59 @@ int server_port = 5001;
 int main(int argc, char *argv[])
 {
 	int sock;
-	struct addrinfo hints, *p, *servinfo;
-	char delim[] = ":";
-	char *Desthost = strtok(argv[1], delim); // dizhi
-	char *Destport = strtok(NULL, delim);
-	int port = atoi(Destport); // 5000
-	server_ip = Desthost;
-	server_port = port;
-	printf("Host %s, and port %d.\n", server_ip, server_port);
+    struct addrinfo hints, *p, *servinfo;
+    char delim[] = ":";
+    char *Desthost = strtok(argv[1], delim);
+    char *Destport = strtok(NULL, delim);
+    int port = atoi(Destport);
+    server_ip = Desthost;
+    server_port = port;
+    printf("Host %s, and port %d.\n", server_ip, server_port);
 
-	int rv;
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_DGRAM;
+    int rv;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+	// Desthost="ff02::1";
+	// Destport=NULL;
 
-	if ((rv = getaddrinfo(Desthost, Destport, &hints, &servinfo)) != 0)
-	{
-		perror("getaddrinfo fail");
-		exit(1);
-	}
-	for (p = servinfo; p != NULL; p = p->ai_next)
-	{
-		if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-		{
-			perror("talker: socket");
-			continue;
-		}
-		break;
-	}
-	if (p == NULL)
-	{
-		fprintf(stderr, "talker: failed to create socket\n");
-		return 2;
-	}
-	char myAddress[20];
+    if ((rv = getaddrinfo(Desthost, Destport, &hints, &servinfo)) != 0)
+    {
+        perror("getaddrinfo fail");
+        exit(1);
+    }
 
-	struct sockaddr_in local_sin;
-	socklen_t local_sinlen = sizeof(local_sin);
-	getsockname(sock, (struct sockaddr *)&local_sin, &local_sinlen);
+    struct sockaddr_in local_sin;
+    socklen_t local_sinlen = sizeof(local_sin);
+    for (p = servinfo; p != NULL; p = p->ai_next)
+    {
+        if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+        {
+            perror("talker: socket");
+            continue;
+        }
 
-	inet_ntop(local_sin.sin_family, &local_sin.sin_addr, myAddress, sizeof(myAddress));
-	printf("Connected to %s:%s  local %s:%d\n", Desthost, Destport, myAddress, ntohs(local_sin.sin_port));
-	/* Do magic */
+        if (connect(sock, p->ai_addr, p->ai_addrlen) == -1)
+        {
+            close(sock);
+            perror("talker: connect");
+            continue;
+        }//Not mandatory
+
+        getsockname(sock, (struct sockaddr *)&local_sin, &local_sinlen);
+        char myAddress[20];
+        inet_ntop(local_sin.sin_family, &local_sin.sin_addr, myAddress, sizeof(myAddress));
+        printf("Connected to %s:%s  local %s:%d\n", Desthost, Destport, myAddress, ntohs(local_sin.sin_port));
+        break;
+    }
+
+    if (p == NULL)
+    {
+        fprintf(stderr, "talker: failed to create socket\n");
+        return 2;
+    }
+
+    freeaddrinfo(servinfo);
 	char buf[1000];
 	// int sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 	// if (sock < 0)
@@ -85,7 +96,7 @@ int main(int argc, char *argv[])
 	}
 
 	calcMessage msg;
-	msg.type = htons(22);//21
+	msg.type = htons(22); // 21
 	msg.message = htonl(0);
 	msg.protocol = htons(17);
 	msg.major_version = htons(1);
@@ -341,6 +352,6 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-	}
+	}close(sock);
 #endif
 }
