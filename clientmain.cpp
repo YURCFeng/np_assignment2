@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	}
 
 	calcMessage msg;
-	msg.type = htons(22);
+	msg.type = htons(22);//21
 	msg.message = htonl(0);
 	msg.protocol = htons(17);
 	msg.major_version = htons(1);
@@ -130,7 +130,12 @@ int main(int argc, char *argv[])
 		{
 			calcMessage msg1;
 			memcpy(&msg1, buf, sizeof(buf));
-			if (msg1.type == 2 && msg1.message == 2 && msg1.major_version == 1 && msg1.minor_version == 0)
+			printf("type: %u\n", ntohs(msg1.type));
+			printf("message: %u\n", ntohl(msg1.message));
+			printf("major_version: %u\n", ntohs(msg1.major_version));
+			printf("minor_version: %u\n", ntohs(msg1.minor_version));
+
+			if (ntohs(msg1.type) == 2 && ntohl(msg1.message) == 2 && ntohs(msg1.major_version) == 1 && ntohs(msg1.minor_version) == 0)
 			{
 				printf("The server sent a 'NOT OK' message\n");
 				close(sock);
@@ -193,7 +198,7 @@ int main(int argc, char *argv[])
 					strncpy(op, "fdiv", sizeof(op));
 				}
 				// printf("%s %8.8g %8.8g = %8.8g\n", op, f1, f2, fresult);
-				printf("ASSIGNMENT: %s %8.8g %8.8g\n", op,f1,f2);
+				printf("ASSIGNMENT: %s %8.8g %8.8g\n", op, f1, f2);
 				printf("Calculated the result to %d\n", fresult);
 				res.flResult = fresult;
 				res.type = htons(2);
@@ -279,7 +284,7 @@ int main(int argc, char *argv[])
 					printf("No match\n");
 				}
 				// printf("%s %d %d = %d \n",op,i1,i2,iresult);
-				printf("ASSIGNMENT: %s %d %d\n", op,i1,i2);
+				printf("ASSIGNMENT: %s %d %d\n", op, i1, i2);
 				printf("Calculated the result to %d\n", iresult);
 				res.inResult = htonl(iresult);
 				res.type = htons(2);
