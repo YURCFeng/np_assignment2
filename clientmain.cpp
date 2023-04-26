@@ -24,59 +24,63 @@ int server_port = 5001;
 int main(int argc, char *argv[])
 {
 	int sock;
-    struct addrinfo hints, *p, *servinfo;
-    char delim[] = ":";
-    char *Desthost = strtok(argv[1], delim);
-    char *Destport = strtok(NULL, delim);
-    int port = atoi(Destport);
-    server_ip = Desthost;
-    server_port = port;
-    printf("Host %s, and port %d.\n", server_ip, server_port);
+	struct addrinfo hints, *p, *servinfo;
+	char delim[] = ":";
+	char *Desthost = strtok(argv[1], delim);
+	char *Destport = strtok(NULL, delim);
+	int port = atoi(Destport);
+	server_ip = Desthost;
+	server_port = port;
+	// printf("Host %s, and port %d.\n", server_ip, server_port);
 
-    int rv;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-	// Desthost="ff02::1";
-	// Destport=NULL;
+	int rv;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	// Desthost = "ff02::1";
+	// Destport = NULL;
 
-    if ((rv = getaddrinfo(Desthost, Destport, &hints, &servinfo)) != 0)
-    {
-        perror("getaddrinfo fail");
-        exit(1);
-    }
+	if ((rv = getaddrinfo(Desthost, Destport, &hints, &servinfo)) != 0)
+	{
+		perror("getaddrinfo fail");
+		exit(1);
+	}
 
-    struct sockaddr_in local_sin;
-    socklen_t local_sinlen = sizeof(local_sin);
-    for (p = servinfo; p != NULL; p = p->ai_next)
-    {
-        if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-        {
-            perror("talker: socket");
-            continue;
-        }
+	struct sockaddr_in local_sin;
+	socklen_t local_sinlen = sizeof(local_sin);
+	for (p = servinfo; p != NULL; p = p->ai_next)
+	{
+		if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+		{
+			perror("talker: socket");
+			continue;
+		}
+		// if (connect(sock, p->ai_addr, p->ai_addrlen) == -1)
+		// {
+		// 	close(sock);
+		// 	perror("talker: connect");
+		// 	continue;
+		// } // Not mandatory
+		getsockname(sock, (struct sockaddr *)&local_sin, &local_sinlen);
+		char myAddress[20];
+		inet_ntop(local_sin.sin_family, &local_sin.sin_addr, myAddress, sizeof(myAddress));
+		printf("before send local %s:%d\n", myAddress, ntohs(local_sin.sin_port));
 
-        if (connect(sock, p->ai_addr, p->ai_addrlen) == -1)
-        {
-            close(sock);
-            perror("talker: connect");
-            continue;
-        }//Not mandatory
+		
+		char ipaddr[20];
+		inet_ntop(p->ai_family, &((struct sockaddr_in *)((struct sockaddr *)p->ai_addr))->sin_addr, ipaddr, sizeof(ipaddr));
+		printf("Host %s, and port %d\n", ipaddr, port);
 
-        getsockname(sock, (struct sockaddr *)&local_sin, &local_sinlen);
-        char myAddress[20];
-        inet_ntop(local_sin.sin_family, &local_sin.sin_addr, myAddress, sizeof(myAddress));
-        printf("Connected to %s:%s  local %s:%d\n", Desthost, Destport, myAddress, ntohs(local_sin.sin_port));
-        break;
-    }
+		break;
+	}
 
-    if (p == NULL)
-    {
-        fprintf(stderr, "talker: failed to create socket\n");
-        return 2;
-    }
+	if (p == NULL)
+	{
+		fprintf(stderr, "talker: failed to create socket\n");
+		return 2;
+	}
 
-    freeaddrinfo(servinfo);
+	freeaddrinfo(servinfo);
 	char buf[1000];
 	// int sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 	// if (sock < 0)
@@ -137,6 +141,11 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
+		getsockname(sock, (struct sockaddr *)&local_sin, &local_sinlen);
+		char myAddress[20];
+		inet_ntop(local_sin.sin_family, &local_sin.sin_addr, myAddress, sizeof(myAddress));
+		printf("atfer send local %s:%d\n", myAddress, ntohs(local_sin.sin_port));
+
 		if (n == 12)
 		{
 			calcMessage msg1;
@@ -352,6 +361,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-	}close(sock);
+	}
+	close(sock);
 #endif
 }
